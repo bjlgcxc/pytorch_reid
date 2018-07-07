@@ -11,7 +11,10 @@ from torch.optim import lr_scheduler
 from torchvision import datasets, transforms
 import time
 import os
-from model.model import ReID_Net
+import sys
+if not os.getcwd() in sys.path:
+     sys.path.append(os.getcwd())
+from models import ResNet50
 from utils.random_erasing import RandomErasing
 import json
 
@@ -23,8 +26,9 @@ parser.add_argument('--name', default='ResNet50', type=str, help='output model n
 parser.add_argument('--data_dir', default='../dataset/Market/pytorch', type=str, help='training dir path')
 parser.add_argument('--train_all', action='store_true', help='use all training data')
 parser.add_argument('--color_jitter', action='store_true', help='use color jitter in training')
-parser.add_argument('--batchsize', default=32, type=int, help='batchsize')
+parser.add_argument('--batchsize', default=16, type=int, help='batchsize')
 parser.add_argument('--erasing_p', default=0, type=float, help='Random Erasing probability, in [0,1]')
+parser.add_argument('--metric', default=None, type=str, help='metric, in [arcface, cosface, sphereface]')
 ##########################################################################################################
 
 
@@ -36,6 +40,7 @@ opt = parser.parse_args()
 
 data_dir = opt.data_dir
 name = opt.name
+metric = opt.metric
 
 transform_train_list = [
     transforms.Resize(144, interpolation=3),
@@ -167,19 +172,19 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
 
 def save_network(network, epoch_label):
     save_filename = 'net_%s.pth' % epoch_label
-    save_path = os.path.join('./result', name, save_filename)
+    save_path = os.path.join('./logs', name, save_filename)
     torch.save(network.cpu().state_dict(), save_path)
     if torch.cuda.is_available:
         network.cuda(gpu_ids[0])
 
 
-if __name__ == '__main':
+if __name__ == '__main__':
 
-    model = ReID_Net(len(class_names), 1024, 'amsoftmax').cuda()
+    model = ResNet50(len(class_names), 1024, metric).cuda()
 
     criterion = nn.CrossEntropyLoss()
 
-    optimizer_ft = optim.SGD(params=model.parameters() ,lr=0.001, weight_decay=5e-4, momentum=0.9, nesterov=True)
+    optimizer_ft = optim.SGD(params=model.parameters() ,lr=0.01, weight_decay=5e-4, momentum=0.9, nesterov=True)
     #optimizer_ft = optim.Adam(params=model.parameters(), lr=0.01)
 
     exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=30, gamma=0.1)
@@ -191,5 +196,5 @@ if __name__ == '__main':
     # save opts
     with open('%s/opts.json' % dir_name, 'w') as fp:
         json.dump(vars(opt), fp, indent=1)
-
-    model = train_model(model, criterion, optimizer_ft, exp_lr_scheduler,num_epochs=100)
+    
+    model = train_model(model, criterion, optimizer_ft, exp_lr_scheduler,num_epochs=60)

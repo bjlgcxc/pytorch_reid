@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.nn import init
 from torchvision import models
 from torch.autograd import Variable
-from metric import * 
+from .metric import * 
 
 def weights_init_kaiming(m):
     classname = m.__class__.__name__
@@ -36,7 +36,7 @@ class ClassBlock(nn.Module):
         if metric is None:
             self.classifier = nn.Linear(input_dim, class_num)
         elif metric == 'cosface':
-            self.classifier = AMSoftmax(class_num, input_dim)
+            self.classifier = AddMarginProduct(input_dim, class_num)
 
     def forward(self, x, y):
         x = self.Bn(x)
@@ -81,7 +81,7 @@ class ResNet50(nn.Module):
         super(ResNet50, self).__init__()
         self.model = Backbone(feat_size)
 
-        self.classifier = ClassBlock(feat_size, class_num, metric)
+        self.classifier = ClassBlock(feat_size, class_num, metric, dropout=False)
         weights_init_classifier(self.classifier)
 
     def forward(self, x, y=None):
