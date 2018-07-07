@@ -187,7 +187,7 @@ if __name__ == '__main__':
     optimizer_ft = optim.SGD(params=model.parameters() ,lr=0.01, weight_decay=5e-4, momentum=0.9, nesterov=True)
     #optimizer_ft = optim.Adam(params=model.parameters(), lr=0.01)
 
-    exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=30, gamma=0.1)
+    exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=5, gamma=0.5)
 
     dir_name = os.path.join('./logs', name)
     if not os.path.isdir(dir_name):
