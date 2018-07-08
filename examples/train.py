@@ -175,7 +175,7 @@ def save_network(network, epoch_label):
     save_path = os.path.join('./logs', name, save_filename)
     torch.save(network.cpu().state_dict(), save_path)
     if torch.cuda.is_available:
-        network.cuda(gpu_ids[0])
+        network.cuda(0)
 
 
 if __name__ == '__main__':
