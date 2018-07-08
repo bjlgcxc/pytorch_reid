@@ -115,7 +115,7 @@ class SphereProduct(nn.Module):
         super(SphereProduct, self).__init__()
         self.in_features = in_features
         self.out_features = out_features
-        self.m = m
+        self.m = int(m)
         self.base = 1000.0
         self.gamma = 0.12
         self.power = 1

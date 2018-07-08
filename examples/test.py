@@ -24,8 +24,8 @@ parser.add_argument('--name', default='ResNet50', type=str, help='save model pat
 parser.add_argument('--save', default='logs/pytorch_result.mat', type=str, help='path of test result file')
 parser.add_argument('--batchsize', default=16, type=int, help='batchsize')
 parser.add_argument('--metric', default=None, type=str, help='metric in [cosface, arcface, sphereface]')
-parser.add_argument('--margin', default=None, type=str, help='margin')
-parser.add_argument('--scalar', default=None, type=str, help='scalar')
+parser.add_argument('--margin', default=None, type=float, help='margin')
+parser.add_argument('--scalar', default=None, type=float, help='scalar')
 
 opt = parser.parse_args()
 
