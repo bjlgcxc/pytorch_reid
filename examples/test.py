@@ -21,6 +21,7 @@ parser = argparse.ArgumentParser(description='Testing')
 parser.add_argument('--which_epoch',default='last', type=str, help='0,1,2,3...or last')
 parser.add_argument('--test_dir',default='../dataset/Market/pytorch',type=str, help='./test_data')
 parser.add_argument('--name', default='ResNet50', type=str, help='save model path')
+parser.add_argument('--save', default='logs/pytorch_result.mat', type=str, help='path of test result file')
 parser.add_argument('--batchsize', default=16, type=int, help='batchsize')
 parser.add_argument('--metric', default=None, type=str, help='metric in [cosface, arcface, sphereface]')
 parser.add_argument('--margin', default=None, type=str, help='margin')
@@ -30,6 +31,7 @@ opt = parser.parse_args()
 
 which_epoch = opt.which_epoch
 name = opt.name
+save = opt.save
 test_dir = opt.test_dir
 metric = opt.metric
 margin = opt.margin
@@ -146,4 +148,4 @@ query_feature = extract_feature(model, dataloaders['query'])
 
 # Save to Matlab for check
 result = {'gallery_f':gallery_feature.numpy(),'gallery_label':gallery_label,'gallery_cam':gallery_cam,'query_f':query_feature.numpy(),'query_label':query_label,'query_cam':query_cam}
-scipy.io.savemat('logs/pytorch_result.mat',result)
+scipy.io.savemat(save, result)
