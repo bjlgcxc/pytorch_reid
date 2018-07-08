@@ -28,7 +28,7 @@ parser.add_argument('--train_all', action='store_true', help='use all training d
 parser.add_argument('--color_jitter', action='store_true', help='use color jitter in training')
 parser.add_argument('--batchsize', default=16, type=int, help='batchsize')
 parser.add_argument('--erasing_p', default=0, type=float, help='Random Erasing probability, in [0,1]')
-parser.add_argument('--metric', default=None, type=int, help='metric, in [arcface, cosface, sphereface]')
+parser.add_argument('--metric', default=None, type=str, help='metric, in [arcface, cosface, sphereface]')
 parser.add_argument('--margin', default=None, type=float, help='margin')
 parser.add_argument('--scalar', default=None, type=float, help='scalar')
 ##########################################################################################################
