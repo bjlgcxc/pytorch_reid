@@ -146,12 +146,12 @@ class SphereProduct(nn.Module):
         cos_theta = cos_theta.clamp(-1, 1)
         cos_m_theta = self.mlambda[self.m](cos_theta)
         theta = cos_theta.data.acos()
-        k = (self.m * theta / 3.14159265).floor()
+        k = Variable((self.m * theta / 3.14159265).floor())
         phi_theta = ((-1.0) ** k) * cos_m_theta - 2 * k
         NormOfFeature = torch.norm(input, 2, 1)
 
         # --------------------------- convert label to one-hot ---------------------------
-        one_hot = torch.zeros(cos_theta.size()).cuda()
+        one_hot = Variable(torch.zeros(cos_theta.size()).cuda())
         one_hot = one_hot.cuda() if cos_theta.is_cuda else one_hot
         one_hot.scatter_(1, label.view(-1, 1), 1)
 
