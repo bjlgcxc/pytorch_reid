@@ -36,6 +36,7 @@ class ClassBlock(nn.Module):
         if metric is None:
             self.classifier = nn.Linear(input_dim, class_num)
         else:
+            self.dropout = False
             args = {}
             if margin:
                 args['m'] = margin
@@ -91,7 +92,7 @@ class ResNet50(nn.Module):
         super(ResNet50, self).__init__()
         self.model = Backbone(feat_size)
 
-        self.classifier = ClassBlock(feat_size, class_num, metric, margin, scalar, dropout=False)
+        self.classifier = ClassBlock(feat_size, class_num, metric, margin, scalar)
         weights_init_classifier(self.classifier)
 
     def forward(self, x, y=None):
