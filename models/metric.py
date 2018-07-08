@@ -19,7 +19,7 @@ class ArcMarginProduct(nn.Module):
 
             cos(theta + m)
         """
-    def __init__(self, in_features, out_features, s=30.0, m=0.50, easy_margin=False):
+    def __init__(self, in_features, out_features, s=30.0, m=0.50, easy_margin=False, **kwargs):
         super(ArcMarginProduct, self).__init__()
         self.in_features = in_features
         self.out_features = out_features
@@ -33,6 +33,8 @@ class ArcMarginProduct(nn.Module):
         self.sin_m = math.sin(m)
         self.th = math.cos(math.pi - m)
         self.mm = math.sin(math.pi - m) * m
+
+        print('{}, m={}, s={}'.format('arcface', m, s))
 
     def forward(self, input, label):
         # --------------------------- cos(theta) & phi(theta) ---------------------------
@@ -67,7 +69,7 @@ class AddMarginProduct(nn.Module):
         cos(theta) - m
     """
 
-    def __init__(self, in_features, out_features, s=10.0, m=0.35):
+    def __init__(self, in_features, out_features, s=30.0, m=0.35, **kwargs):
         super(AddMarginProduct, self).__init__()
         self.in_features = in_features
         self.out_features = out_features
@@ -75,6 +77,8 @@ class AddMarginProduct(nn.Module):
         self.m = m
         self.weight = Parameter(torch.FloatTensor(out_features, in_features))
         init.kaiming_uniform(self.weight)
+   
+        print('{}, m={}, s={}'.format('cosface', m, s))
 
     def forward(self, input, label):
         # --------------------------- cos(theta) & phi(theta) ---------------------------
@@ -107,7 +111,7 @@ class SphereProduct(nn.Module):
         m: margin
         cos(m*theta)
     """
-    def __init__(self, in_features, out_features, m=4):
+    def __init__(self, in_features, out_features, m=4, **kwargs):
         super(SphereProduct, self).__init__()
         self.in_features = in_features
         self.out_features = out_features
@@ -129,6 +133,8 @@ class SphereProduct(nn.Module):
             lambda x: 8 * x ** 4 - 8 * x ** 2 + 1,
             lambda x: 16 * x ** 5 - 20 * x ** 3 + 5 * x
         ]
+
+        print('{}, m={}'.format('sphereface', m))
 
     def forward(self, input, label):
         # lambda = max(lambda_min,base*(1+gamma*iteration)^(-power))

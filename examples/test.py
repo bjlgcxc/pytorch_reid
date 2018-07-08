@@ -4,40 +4,36 @@ from __future__ import print_function, division
 
 import argparse
 import os
-
+import sys
+if not os.getcwd() in sys.path:
+    sys.path.append(os.getcwd())
 import scipy.io
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
 from torchvision import datasets, transforms
-from model.model import ReID_Net
+from models import ResNet50 
 
 ######################################################################
 # Options
 # --------
-parser = argparse.ArgumentParser(description='Training')
-parser.add_argument('--gpu_ids',default='0', type=str,help='gpu_ids: e.g. 0  0,1,2  0,2')
+parser = argparse.ArgumentParser(description='Testing')
 parser.add_argument('--which_epoch',default='last', type=str, help='0,1,2,3...or last')
-parser.add_argument('--test_dir',default='dataset/Market/pytorch',type=str, help='./test_data')
+parser.add_argument('--test_dir',default='../dataset/Market/pytorch',type=str, help='./test_data')
 parser.add_argument('--name', default='ResNet50', type=str, help='save model path')
-parser.add_argument('--batchsize', default=100, type=int, help='batchsize')
+parser.add_argument('--batchsize', default=16, type=int, help='batchsize')
+parser.add_argument('--metric', default=None, type=str, help='metric in [cosface, arcface, sphereface]')
+parser.add_argument('--margin', default=None, type=str, help='margin')
+parser.add_argument('--scalar', default=None, type=str, help='scalar')
 
 opt = parser.parse_args()
 
-str_ids = opt.gpu_ids.split(',')
-#which_epoch = opt.which_epoch
+which_epoch = opt.which_epoch
 name = opt.name
 test_dir = opt.test_dir
-
-gpu_ids = []
-for str_id in str_ids:
-    id = int(str_id)
-    if id >=0:
-        gpu_ids.append(id)
-
-# set gpu ids
-if len(gpu_ids)>0:
-    torch.cuda.set_device(gpu_ids[0])
+metric = opt.metric
+margin = opt.margin
+scalar = opt.scalar
 
 ######################################################################
 # Load Data
@@ -58,20 +54,18 @@ data_transforms = transforms.Compose([
     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]) 
 ])
 
-
 data_dir = test_dir
 image_datasets = {x: datasets.ImageFolder( os.path.join(data_dir,x) ,data_transforms) for x in ['gallery','query']}
 dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=opt.batchsize,
                                              shuffle=False, num_workers=0) for x in ['gallery','query']}
 
 class_names = image_datasets['query'].classes
-use_gpu = torch.cuda.is_available()
 
 ######################################################################
 # Load model
 #---------------------------
 def load_network(network):
-    save_path = os.path.join('./result',name,'net_%s.pth'%opt.which_epoch)
+    save_path = os.path.join('./logs',name,'net_%s.pth'%opt.which_epoch)
     network.load_state_dict(torch.load(save_path))
     return network
 
@@ -134,10 +128,11 @@ query_path = image_datasets['query'].imgs
 gallery_cam,gallery_label = get_id(gallery_path)
 query_cam,query_label = get_id(query_path)
 
+
 ######################################################################
 # Load Collected data Trained model
 print('----------test-----------')
-model_structure = ReID_Net(751, 1024, 'amsoftmax')
+model_structure = ResNet50(751, 1024, metric, margin, scalar)
 
 model = load_network(model_structure).model
 
@@ -151,4 +146,4 @@ query_feature = extract_feature(model, dataloaders['query'])
 
 # Save to Matlab for check
 result = {'gallery_f':gallery_feature.numpy(),'gallery_label':gallery_label,'gallery_cam':gallery_cam,'query_f':query_feature.numpy(),'query_label':query_label,'query_cam':query_cam}
-scipy.io.savemat('result/pytorch_result.mat',result)
+scipy.io.savemat('logs/pytorch_result.mat',result)

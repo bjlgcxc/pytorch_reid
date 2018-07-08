@@ -29,6 +29,8 @@ parser.add_argument('--color_jitter', action='store_true', help='use color jitte
 parser.add_argument('--batchsize', default=16, type=int, help='batchsize')
 parser.add_argument('--erasing_p', default=0, type=float, help='Random Erasing probability, in [0,1]')
 parser.add_argument('--metric', default=None, type=str, help='metric, in [arcface, cosface, sphereface]')
+parser.add_argument('--margin', default=None, type=str, help='margin')
+parser.add_argument('--scalar', default=None, type=str, help='scalar')
 ##########################################################################################################
 
 
@@ -41,6 +43,8 @@ opt = parser.parse_args()
 data_dir = opt.data_dir
 name = opt.name
 metric = opt.metric
+margin = opt.margin
+scalar = opt.scalar
 
 transform_train_list = [
     transforms.Resize(144, interpolation=3),
@@ -180,14 +184,13 @@ def save_network(network, epoch_label):
 
 if __name__ == '__main__':
 
-    model = ResNet50(len(class_names), 1024, metric).cuda()
+    model = ResNet50(len(class_names), 1024, metric, margin, scalar).cuda()
 
     criterion = nn.CrossEntropyLoss()
 
     optimizer_ft = optim.SGD(params=model.parameters() ,lr=0.01, weight_decay=5e-4, momentum=0.9, nesterov=True)
-    #optimizer_ft = optim.Adam(params=model.parameters(), lr=0.01)
 
-    exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=5, gamma=0.5)
+    exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=10, gamma=0.5)
 
     dir_name = os.path.join('./logs', name)
     if not os.path.isdir(dir_name):

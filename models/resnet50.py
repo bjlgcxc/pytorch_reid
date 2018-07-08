@@ -23,7 +23,7 @@ def weights_init_classifier(m):
         init.constant(m.bias.data, 0.0)
 
 class ClassBlock(nn.Module):
-    def __init__(self, input_dim, class_num, metric=None, dropout=True, relu=True):
+    def __init__(self, input_dim, class_num, metric=None, margin=None, scalar=None, dropout=True, relu=True):
         super(ClassBlock, self).__init__()
         self.metric = metric
         self.dropout = dropout
@@ -35,8 +35,18 @@ class ClassBlock(nn.Module):
 
         if metric is None:
             self.classifier = nn.Linear(input_dim, class_num)
-        elif metric == 'cosface':
-            self.classifier = AddMarginProduct(input_dim, class_num)
+        else:
+            args = {}
+            if margin:
+                args['m'] = margin
+            if scalar:
+                args['s'] = scalar
+            if metric == 'cosface':
+                self.classifier = AddMarginProduct(input_dim, class_num, **args)
+            elif metric == 'arcface':
+                self.classifier = ArcMarginProduct(input_dim, class_num, **args)
+            elif metric == 'sphereface':
+                self.classifier = SphereProduct(input_dim, class_num, **args)
 
     def forward(self, x, y):
         x = self.Bn(x)
@@ -77,11 +87,11 @@ class Backbone(nn.Module):
         return x
 
 class ResNet50(nn.Module):
-    def __init__(self, class_num, feat_size, metric=None):
+    def __init__(self, class_num, feat_size, metric=None, margin=None, scalar=None):
         super(ResNet50, self).__init__()
         self.model = Backbone(feat_size)
 
-        self.classifier = ClassBlock(feat_size, class_num, metric, dropout=False)
+        self.classifier = ClassBlock(feat_size, class_num, metric, margin, scalar, dropout=False)
         weights_init_classifier(self.classifier)
 
     def forward(self, x, y=None):
