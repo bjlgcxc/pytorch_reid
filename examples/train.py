@@ -188,9 +188,11 @@ if __name__ == '__main__':
 
     criterion = nn.CrossEntropyLoss()
 
-    optimizer_ft = optim.SGD(params=model.parameters() ,lr=0.01, weight_decay=5e-4, momentum=0.9, nesterov=True)
-
+    optimizer_ft = optim.SGD(params=model.parameters() ,lr=0.1, weight_decay=1e-4, momentum=0.9, nesterov=True)
     exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=10, gamma=0.5)
+    
+    # override
+    optimizer_ft = optim.Adam(params=model.parameters(), lr=0.01)
 
     dir_name = os.path.join('./logs', name)
     if not os.path.isdir(dir_name):
