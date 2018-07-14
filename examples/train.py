@@ -198,9 +198,9 @@ if __name__ == '__main__':
         lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=10, gamma=0.5)
     elif optim_type == 'SGD_Warmup':
         lr_steps = [30, 35, 40, 45, 50]
-        init_lr = 0.01
+        init_lr = 0.001
         gamma = 0.5
-        warmup_lr = 0.001
+        warmup_lr = 0.01
         warmup_steps = 20
         gap = warmup_lr - init_lr
         warmup_mults = [(init_lr + (i+1)*gap/warmup_steps) / (init_lr + i*gap/warmup_steps) for i in range(warmup_steps)]
