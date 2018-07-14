@@ -15,6 +15,7 @@ import sys
 if not os.getcwd() in sys.path:
      sys.path.append(os.getcwd())
 from models import ResNet50
+from models.utils import StepLRScheduler
 from utils.random_erasing import RandomErasing
 import json
 
@@ -31,6 +32,7 @@ parser.add_argument('--erasing_p', default=0, type=float, help='Random Erasing p
 parser.add_argument('--metric', default=None, type=str, help='metric, in [arcface, cosface, sphereface]')
 parser.add_argument('--margin', default=None, type=float, help='margin')
 parser.add_argument('--scalar', default=None, type=float, help='scalar')
+parser.add_argument('--optim_type', default='SGD_Step', type=str, help='SGD_Step, SGD_warmup, Adam')
 ##########################################################################################################
 
 
@@ -45,6 +47,7 @@ name = opt.name
 metric = opt.metric
 margin = opt.margin
 scalar = opt.scalar
+optim_type = opt.optim_type
 
 transform_train_list = [
     transforms.Resize(144, interpolation=3),
@@ -125,7 +128,9 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
         # Each epoch has a training and validation phase
         for phase in ['train', 'val']:
             if phase == 'train':
-                scheduler.step()
+                if scheduler != None:
+                    scheduler.step()
+                    print('lr: {}'.format(scheduler.get_lr()[0]))
                 model.train(True)
             else:
                 model.train(False)
@@ -188,11 +193,25 @@ if __name__ == '__main__':
 
     criterion = nn.CrossEntropyLoss()
 
-    optimizer_ft = optim.SGD(params=model.parameters() ,lr=0.1, weight_decay=1e-4, momentum=0.9, nesterov=True)
-    exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=10, gamma=0.5)
-    
-    # override
-    optimizer_ft = optim.Adam(params=model.parameters(), lr=0.01)
+    if optim_type == 'SGD_Step':
+        optimizer = optim.SGD(params=model.parameters() ,lr=0.001, weight_decay=5e-4, momentum=0.9, nesterov=True)
+        lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=10, gamma=0.5)
+    elif optim_type == 'SGD_Warmup':
+        lr_steps = [30, 35, 40, 45, 50]
+        init_lr = 0.01
+        gamma = 0.5
+        warmup_lr = 0.001
+        warmup_steps = 20
+        gap = warmup_lr - init_lr
+        warmup_mults = [(init_lr + (i+1)*gap/warmup_steps) / (init_lr + i*gap/warmup_steps) for i in range(warmup_steps)]
+        warmup_steps = list(range(warmup_steps))
+        lr_mults = warmup_mults + [gamma]*len(lr_steps)
+        lr_steps = warmup_steps + lr_steps
+        optimizer = optim.SGD(params=model.parameters() ,lr=init_lr , weight_decay=5e-4, momentum=0.9, nesterov=True) 
+        lr_scheduler = StepLRScheduler(optimizer, lr_steps, lr_mults, last_iter=-1) 
+    elif optim_type == 'Adam':
+        optimizer = optim.Adam(params=model.parameters(), lr=0.001)
+        lr_scheduler = None
 
     dir_name = os.path.join('./logs', name)
     if not os.path.isdir(dir_name):
@@ -202,4 +221,4 @@ if __name__ == '__main__':
     with open('%s/opts.json' % dir_name, 'w') as fp:
         json.dump(vars(opt), fp, indent=1)
     
-    model = train_model(model, criterion, optimizer_ft, exp_lr_scheduler,num_epochs=60)
+    model = train_model(model, criterion, optimizer, lr_scheduler, num_epochs=60)

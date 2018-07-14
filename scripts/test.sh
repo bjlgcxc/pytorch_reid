@@ -1,11 +1,11 @@
 #!/bin/bash
 
-metric=arcface
-margin=0.35
+metric=sphereface
+margin=3
 scalar=30
-name=${metric}_m_${margin}_s_{scalar}
+name=${metric}_m_${margin}_s_${scalar}
 
-epoch=29
+epoch=last
 
 python examples/test.py \
   --batchsize=16 \

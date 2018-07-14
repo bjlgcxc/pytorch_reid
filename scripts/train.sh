@@ -1,9 +1,10 @@
 #!/bin/bash
 
-metric=cosface
-margin=0.35
+metric=sphereface
+margin=3
 scalar=30
 name=${metric}_m_${margin}_s_${scalar}
+optim_type=SGD_Warmup
 
 python examples/train.py \
   --train_all \
@@ -11,4 +12,5 @@ python examples/train.py \
   --metric=${metric} \
   --margin=${margin} \
   --scalar=${scalar} \
-  --name=${name}
+  --name=${name} \
+  --optim_type=${optim_type}
