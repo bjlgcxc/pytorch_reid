@@ -1,7 +1,7 @@
 #!/bin/bash
 
-metric=sphereface
-margin=3
+metric=cosface
+margin=0.35
 scalar=30
 name=${metric}_m_${margin}_s_${scalar}
 

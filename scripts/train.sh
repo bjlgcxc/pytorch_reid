@@ -1,14 +1,15 @@
 #!/bin/bash
 
-metric=sphereface
-margin=3
+metric=cosface
+margin=0.35
 scalar=30
 name=${metric}_m_${margin}_s_${scalar}
-optim_type=SGD_Warmup
+optim_type=SGD_Step
 
 python examples/train.py \
   --train_all \
-  --batchsize=16 \
+  --batchsize=32 \
+  --erasing_p=0.2 \
   --metric=${metric} \
   --margin=${margin} \
   --scalar=${scalar} \

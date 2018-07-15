@@ -194,14 +194,14 @@ if __name__ == '__main__':
     criterion = nn.CrossEntropyLoss()
 
     if optim_type == 'SGD_Step':
-        optimizer = optim.SGD(params=model.parameters() ,lr=0.001, weight_decay=5e-4, momentum=0.9, nesterov=True)
-        lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=10, gamma=0.5)
+        optimizer = optim.SGD(params=model.parameters() ,lr=0.01, weight_decay=5e-4, momentum=0.9, nesterov=True)
+        lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
     elif optim_type == 'SGD_Warmup':
-        lr_steps = [30, 35, 40, 45, 50]
-        init_lr = 0.001
-        gamma = 0.5
-        warmup_lr = 0.01
-        warmup_steps = 20
+        lr_steps = [20, 30, 35, 40, 45, 50]
+        init_lr = 0.0001
+        gamma = 0.1
+        warmup_lr = 0.001
+        warmup_steps = 10
         gap = warmup_lr - init_lr
         warmup_mults = [(init_lr + (i+1)*gap/warmup_steps) / (init_lr + i*gap/warmup_steps) for i in range(warmup_steps)]
         warmup_steps = list(range(warmup_steps))

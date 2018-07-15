@@ -31,12 +31,12 @@ class ClassBlock(nn.Module):
 
         self.Bn = nn.BatchNorm1d(input_dim)
         self.ReLU = nn.LeakyReLU(0.1)
-        self.Dropout = nn.Dropout(p=0.5)
+        self.Dropout = nn.Dropout(p=0.25)
 
         if metric is None:
             self.classifier = nn.Linear(input_dim, class_num)
         else:
-            self.dropout = False
+            #self.dropout = False
             args = {}
             if margin:
                 args['m'] = margin
