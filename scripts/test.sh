@@ -4,8 +4,8 @@ metric=cosface
 margin=0.35
 scalar=30
 name=${metric}_m_${margin}_s_${scalar}
-
 epoch=last
+feat_size=512
 
 python examples/test.py \
   --batchsize=16 \
@@ -14,4 +14,6 @@ python examples/test.py \
   --scalar=${scalar} \
   --name=${name} \
   --save=logs/${name}.mat \
-  --which_epoch=${epoch}
+  --which_epoch=${epoch} \
+  --feat_size=${feat_size}
+

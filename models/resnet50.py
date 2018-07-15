@@ -23,20 +23,13 @@ def weights_init_classifier(m):
         init.constant(m.bias.data, 0.0)
 
 class ClassBlock(nn.Module):
-    def __init__(self, input_dim, class_num, metric=None, margin=None, scalar=None, dropout=True, relu=True):
+    def __init__(self, input_dim, class_num, metric=None, margin=None, scalar=None):
         super(ClassBlock, self).__init__()
-        self.metric = metric
-        self.dropout = dropout
-        self.relu = relu
-
-        self.Bn = nn.BatchNorm1d(input_dim)
-        self.ReLU = nn.LeakyReLU(0.1)
-        self.Dropout = nn.Dropout(p=0.25)
-
-        if metric is None:
+		
+        if metric == 'linear':
             self.classifier = nn.Linear(input_dim, class_num)
+            weights_init_classifier(self.classifier)
         else:
-            #self.dropout = False
             args = {}
             if margin:
                 args['m'] = margin
@@ -50,13 +43,7 @@ class ClassBlock(nn.Module):
                 self.classifier = SphereProduct(input_dim, class_num, **args)
 
     def forward(self, x, y):
-        x = self.Bn(x)
-        if self.relu:
-            x = self.ReLU(x)
-        if self.dropout:
-            x = self.Dropout(x)
-
-        if self.metric is None:
+        if y is None:
             x = self.classifier(x)
         else:
             x = self.classifier(x, y)
@@ -88,14 +75,21 @@ class Backbone(nn.Module):
         return x
 
 class ResNet50(nn.Module):
-    def __init__(self, class_num, feat_size, metric=None, margin=None, scalar=None):
+    def __init__(self, class_num, feat_size, metric=None, margin=None, scalar=None, dropout=0):
         super(ResNet50, self).__init__()
         self.model = Backbone(feat_size)
-
         self.classifier = ClassBlock(feat_size, class_num, metric, margin, scalar)
-        weights_init_classifier(self.classifier)
+        self.dropout = dropout
+        self.Bn = nn.BatchNorm1d(feat_size)
+        self.ReLU = nn.ReLU()
+        self.Dropout = nn.Dropout(dropout)
 
     def forward(self, x, y=None):
         x = self.model(x)
+        x = self.Bn(x)
+        x = self.ReLU(x)
+        if self.dropout > 0:
+            x = self.Dropout(x)
+		
         x = self.classifier(x, y)
         return x

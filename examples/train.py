@@ -12,6 +12,7 @@ from torchvision import datasets, transforms
 import time
 import os
 import sys
+import shutil
 if not os.getcwd() in sys.path:
      sys.path.append(os.getcwd())
 from models import ResNet50
@@ -33,6 +34,8 @@ parser.add_argument('--metric', default=None, type=str, help='metric, in [arcfac
 parser.add_argument('--margin', default=None, type=float, help='margin')
 parser.add_argument('--scalar', default=None, type=float, help='scalar')
 parser.add_argument('--optim_type', default='SGD_Step', type=str, help='SGD_Step, SGD_warmup, Adam')
+parser.add_argument('--dropout', default=0.5, type=float, help='dropout rate')
+parser.add_argument('--feat_size', default=1024, type=int, help='feature size')
 ##########################################################################################################
 
 
@@ -48,6 +51,8 @@ metric = opt.metric
 margin = opt.margin
 scalar = opt.scalar
 optim_type = opt.optim_type
+dropout = opt.dropout
+feat_size = opt.feat_size
 
 transform_train_list = [
     transforms.Resize(144, interpolation=3),
@@ -106,25 +111,16 @@ use_gpu = torch.cuda.is_available()
 
 inputs, classes = next(iter(dataloaders['train']))
 
-y_loss = {}
-y_loss['train'] = []
-y_loss['val'] = []
-y_err = {}
-y_err['train'] = []
-y_err['val'] = []
 
 ###########################################################################################################
 
-def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
+def train_model(model, criterion, optimizer, scheduler, num_epochs=30):
     since = time.time()
 
-    best_model_wts = model.state_dict()
-    best_acc = 0.0
-
     for epoch in range(num_epochs):
-        print('Epoch {}/{}'.format(epoch, num_epochs - 1))
         print('-' * 10)
-
+        print('Epoch {}/{}'.format(epoch, num_epochs-1))
+        
         # Each epoch has a training and validation phase
         for phase in ['train', 'val']:
             if phase == 'train':
@@ -161,21 +157,16 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
             print('{} Loss: {:.4f} Acc: {:.4f}'.format(
                 phase, epoch_loss, epoch_acc))
 
-            y_loss[phase].append(epoch_loss)
-            y_err[phase].append(1.0 - epoch_acc)
             # deep copy the model
             if phase == 'val':
-                last_model_wts = model.state_dict()
                 if epoch % 10 == 9:
                     save_network(model, epoch)
+                save_network(model, 'last')
 
     time_elapsed = time.time() - since
     print('Training complete in {:.0f}m {:.0f}s'.format(
         time_elapsed // 60, time_elapsed % 60))
 
-    # load best model weights
-    model.load_state_dict(last_model_wts)
-    save_network(model, 'last')
     return model
 
 
@@ -189,13 +180,15 @@ def save_network(network, epoch_label):
 
 if __name__ == '__main__':
 
-    model = ResNet50(len(class_names), 1024, metric, margin, scalar).cuda()
+    model = ResNet50(len(class_names), feat_size, metric, margin, scalar, dropout).cuda()
 
     criterion = nn.CrossEntropyLoss()
-
+    
+	# SGD_Step
     if optim_type == 'SGD_Step':
-        optimizer = optim.SGD(params=model.parameters() ,lr=0.01, weight_decay=5e-4, momentum=0.9, nesterov=True)
-        lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
+        optimizer = optim.SGD(params=model.parameters(), lr=0.01, weight_decay=5e-4, momentum=0.9, nesterov=True)
+        lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
+    # SGD_Warmup
     elif optim_type == 'SGD_Warmup':
         lr_steps = [20, 30, 35, 40, 45, 50]
         init_lr = 0.0001
@@ -209,15 +202,16 @@ if __name__ == '__main__':
         lr_steps = warmup_steps + lr_steps
         optimizer = optim.SGD(params=model.parameters() ,lr=init_lr , weight_decay=5e-4, momentum=0.9, nesterov=True) 
         lr_scheduler = StepLRScheduler(optimizer, lr_steps, lr_mults, last_iter=-1) 
+    # Adam 
     elif optim_type == 'Adam':
         optimizer = optim.Adam(params=model.parameters(), lr=0.001)
         lr_scheduler = None
 
     dir_name = os.path.join('./logs', name)
-    if not os.path.isdir(dir_name):
-        os.mkdir(dir_name)
+    if os.path.isdir(dir_name):
+        shutil(dir_name)
+	os.mkdir(dir_name)
 
-    # save opts
     with open('%s/opts.json' % dir_name, 'w') as fp:
         json.dump(vars(opt), fp, indent=1)
     

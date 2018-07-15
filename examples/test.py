@@ -26,6 +26,7 @@ parser.add_argument('--batchsize', default=16, type=int, help='batchsize')
 parser.add_argument('--metric', default=None, type=str, help='metric in [cosface, arcface, sphereface]')
 parser.add_argument('--margin', default=None, type=float, help='margin')
 parser.add_argument('--scalar', default=None, type=float, help='scalar')
+parser.add_argument('--feat_size', default=1024, type=int, help='feature size')
 
 opt = parser.parse_args()
 
@@ -36,6 +37,7 @@ test_dir = opt.test_dir
 metric = opt.metric
 margin = opt.margin
 scalar = opt.scalar
+feat_size = opt.feat_size
 
 ######################################################################
 # Load Data
@@ -93,7 +95,7 @@ def extract_feature(model,dataloaders):
         count += n
         print(count)
         
-        ff = torch.FloatTensor(n, 1024).zero_() 
+        ff = torch.FloatTensor(n, feat_size).zero_() 
         for i in range(2):
             if(i==1):
                 img = fliplr(img)
@@ -134,7 +136,7 @@ query_cam,query_label = get_id(query_path)
 ######################################################################
 # Load Collected data Trained model
 print('----------test-----------')
-model_structure = ResNet50(751, 1024, metric, margin, scalar)
+model_structure = ResNet50(751, feat_size, metric, margin, scalar)
 
 model = load_network(model_structure).model
 
