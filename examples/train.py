@@ -209,8 +209,8 @@ if __name__ == '__main__':
 
     dir_name = os.path.join('./logs', name)
     if os.path.isdir(dir_name):
-        shutil(dir_name)
-	os.mkdir(dir_name)
+        shutil.rmtree(dir_name)
+    os.mkdir(dir_name)
 
     with open('%s/opts.json' % dir_name, 'w') as fp:
         json.dump(vars(opt), fp, indent=1)
