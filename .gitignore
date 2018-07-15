@@ -1,3 +1,5 @@
 logs/*
 *pyc
 __pycache__
+
+*swp
