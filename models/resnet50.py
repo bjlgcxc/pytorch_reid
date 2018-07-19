@@ -26,6 +26,8 @@ class ClassBlock(nn.Module):
     def __init__(self, input_dim, class_num, metric=None, margin=None, scalar=None):
         super(ClassBlock, self).__init__()
 		
+        self.metric = metric
+
         if metric == 'linear':
             self.classifier = nn.Linear(input_dim, class_num)
             weights_init_classifier(self.classifier)
@@ -43,7 +45,7 @@ class ClassBlock(nn.Module):
                 self.classifier = SphereProduct(input_dim, class_num, **args)
 
     def forward(self, x, y):
-        if y is None:
+        if y is None or self.metric=='linear':
             x = self.classifier(x)
         else:
             x = self.classifier(x, y)
@@ -53,12 +55,11 @@ class ClassBlock(nn.Module):
 class Backbone(nn.Module):
     def __init__(self, feat_size, pretrained=True):
         super(Backbone, self).__init__()
-        model_ft = models.resnet50(pretrained=pretrained)
+        self.model = models.resnet50(pretrained=pretrained)
         if not pretrained:
             weights_init_kaiming(model_ft)
-        model_ft.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.model = model_ft
-        self.model.fc = nn.Linear(2048, feat_size)
+        self.model.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+        self.linear = nn.Linear(1000, feat_size)
 
     def forward(self, x):
         x = self.model.conv1(x)
@@ -72,24 +73,26 @@ class Backbone(nn.Module):
         x = self.model.avgpool(x)
         x = torch.squeeze(x)
         x = self.model.fc(x)
+        x = self.linear(x)
+        
         return x
 
 class ResNet50(nn.Module):
     def __init__(self, class_num, feat_size, metric=None, margin=None, scalar=None, dropout=0):
         super(ResNet50, self).__init__()
         self.model = Backbone(feat_size)
+        self.drop = dropout
+        self.bn = nn.BatchNorm1d(feat_size)
+        self.relu = nn.ReLU()
+        self.dropout = nn.Dropout(dropout)
         self.classifier = ClassBlock(feat_size, class_num, metric, margin, scalar)
-        self.dropout = dropout
-        self.Bn = nn.BatchNorm1d(feat_size)
-        self.ReLU = nn.ReLU()
-        self.Dropout = nn.Dropout(dropout)
 
     def forward(self, x, y=None):
         x = self.model(x)
-        x = self.Bn(x)
-        x = self.ReLU(x)
-        if self.dropout > 0:
-            x = self.Dropout(x)
+        x = self.bn(x)
+        x = self.relu(x)
+        if self.drop > 0:
+            x = self.dropout(x)
 		
         x = self.classifier(x, y)
         return x

@@ -10,7 +10,7 @@ feat_size=1024
 
 python examples/train.py \
   --train_all \
-  --batchsize=32 \
+  --batchsize=16 \
   --metric=${metric} \
   --margin=${margin} \
   --scalar=${scalar} \

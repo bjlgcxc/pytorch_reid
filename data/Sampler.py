@@ -1,0 +1,35 @@
+import torch
+import numpy as np
+from torch.utils.data.sampler import Sampler
+from collections import defaultdict
+
+
+class BalancedSampler(Sampler):
+    def __init__(self, data_source, num_instances=4):
+        self.data_source = data_source
+        self.pid_index = defaultdict(list)
+
+        for i, (img, class_idx) in enumerate(data_source):
+            self.pid_index[class_idx].append(i)
+        self.pids = list(self.pid_index.keys())
+
+        self.num_instances = num_instances
+        self.num_samples = len(self.pids)       
+
+    def __len__(self):
+	    return self.num_samples * self.num_instances
+		
+    def __iter__(self):
+        ret = []
+        for _ in range(len(self.data_source) // (self.num_samples*self.num_instances)):
+            indices = torch.randperm(self.num_samples)
+            for i in indices:
+                pid = self.pids[i]
+                t = self.pid_index[pid]
+                if len(t) >= self.num_instances:
+                    t = np.random.choice(t, size=self.num_instances, replace=False)
+                else:
+                    t = np.random.choice(t, size=self.num_instances, replace=True)
+                ret.extend(t)
+        return iter(ret)
+

@@ -19,6 +19,7 @@ from models import ResNet50
 from models.utils import StepLRScheduler
 from utils.random_erasing import RandomErasing
 import json
+from data import BalancedSampler 
 
 #########################################################################################################
 # Options 
@@ -63,11 +64,10 @@ transform_train_list = [
 ]
 
 transform_val_list = [
-    transforms.Resize(size=(256, 128), interpolation=3),  
+    transforms.Resize(size=(288, 144), interpolation=3),  # Image.BICUBIC
     transforms.ToTensor(),
     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
 ]
-
 
 if opt.erasing_p > 0:
     transform_train_list = transform_train_list + [RandomErasing(probability=opt.erasing_p, mean=[0.0, 0.0, 0.0])]
@@ -90,9 +90,13 @@ image_datasets['train'] = datasets.ImageFolder(os.path.join(data_dir, 'train' + 
 image_datasets['val'] = datasets.ImageFolder(os.path.join(data_dir, 'val'),
                                              data_transforms['val'])
 
-dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=opt.batchsize,
-                                              shuffle=True, num_workers=16)
-               for x in ['train', 'val']}
+sampler = BalancedSampler(data_source=image_datasets['train'].imgs, num_instances=4)
+dataloaders = {
+    'train': torch.utils.data.DataLoader(image_datasets['train'], batch_size=opt.batchsize, 
+             shuffle=False, sampler=sampler, num_workers=16),
+    'val': torch.utils.data.DataLoader(image_datasets['val'], batch_size=opt.batchsize,
+             shuffle=True, num_workers=16)
+}
 dataset_sizes = {x: len(image_datasets[x]) for x in ['train', 'val']}
 class_names = image_datasets['train'].classes
 
@@ -105,6 +109,7 @@ inputs, classes = next(iter(dataloaders['train']))
 
 def train_model(model, criterion, optimizer, scheduler, num_epochs=30):
     since = time.time()
+    
     for epoch in range(num_epochs):
         print('-' * 10)
         print('Epoch {}/{}'.format(epoch, num_epochs-1))
@@ -124,7 +129,9 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=30):
             for data in dataloaders[phase]:
                 inputs, labels = data
                 inputs, labels = Variable(inputs).cuda(), Variable(labels).cuda()
-
+                   
+                #if phase=='train':
+                #    print(labels)
                 optimizer.zero_grad()
 
                 outputs = model(inputs, labels)
@@ -174,15 +181,16 @@ if __name__ == '__main__':
     
 	# SGD_Step
     if optim_type == 'SGD_Step':
-        optimizer = optim.SGD(params=model.parameters(), lr=0.01, weight_decay=1e-4, momentum=0.9, nesterov=True)
-        lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.1)
+        optimizer = optim.SGD(params=model.parameters(), lr=0.1, weight_decay=1e-4, momentum=0.9, nesterov=True)
+        lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=40, gamma=0.1)
+        #lr_scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[20, 60, 70, 80])
     # SGD_Warmup
     elif optim_type == 'SGD_Warmup':
-        lr_steps = [20, 30, 35, 40, 45, 50]
+        lr_steps = [20, 80, 100]
         init_lr = 0.00001
         gamma = 0.1
-        warmup_lr = 0.0001
-        warmup_steps = 10
+        warmup_lr = 0.001
+        warmup_steps = 20
         gap = warmup_lr - init_lr
         warmup_mults = [(init_lr + (i+1)*gap/warmup_steps) / (init_lr + i*gap/warmup_steps) for i in range(warmup_steps)]
         warmup_steps = list(range(warmup_steps))
@@ -203,4 +211,4 @@ if __name__ == '__main__':
     with open('%s/opts.json' % dir_name, 'w') as fp:
         json.dump(vars(opt), fp, indent=1)
     
-    model = train_model(model, criterion, optimizer, lr_scheduler, num_epochs=50)
+    model = train_model(model, criterion, optimizer, lr_scheduler, num_epochs=200)
