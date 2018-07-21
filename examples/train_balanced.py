@@ -64,7 +64,7 @@ transform_train_list = [
 ]
 
 transform_val_list = [
-    transforms.Resize(size=(288, 144), interpolation=3),  # Image.BICUBIC
+    transforms.Resize(size=(256, 128), interpolation=3),  # Image.BICUBIC
     transforms.ToTensor(),
     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
 ]
@@ -97,7 +97,7 @@ dataloaders = {
     'val': torch.utils.data.DataLoader(image_datasets['val'], batch_size=opt.batchsize,
              shuffle=True, num_workers=16)
 }
-dataset_sizes = {x: len(image_datasets[x]) for x in ['train', 'val']}
+dataset_sizes = {'train': len(sampler), 'val': len(image_datasets['val'])}
 class_names = image_datasets['train'].classes
 
 use_gpu = torch.cuda.is_available()
@@ -130,8 +130,6 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=30):
                 inputs, labels = data
                 inputs, labels = Variable(inputs).cuda(), Variable(labels).cuda()
                    
-                #if phase=='train':
-                #    print(labels)
                 optimizer.zero_grad()
 
                 outputs = model(inputs, labels)
@@ -170,7 +168,7 @@ def save_network(network, epoch_label):
     save_path = os.path.join('./logs', name, save_filename)
     torch.save(network.cpu().state_dict(), save_path)
     if torch.cuda.is_available:
-        network.cuda(0)
+        network.cuda()
 
 
 if __name__ == '__main__':
@@ -181,26 +179,26 @@ if __name__ == '__main__':
     
 	# SGD_Step
     if optim_type == 'SGD_Step':
-        optimizer = optim.SGD(params=model.parameters(), lr=0.1, weight_decay=1e-4, momentum=0.9, nesterov=True)
-        lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=40, gamma=0.1)
-        #lr_scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[20, 60, 70, 80])
+        optimizer = optim.SGD(params=model.parameters(), lr=0.01, weight_decay=5e-4, momentum=0.9, nesterov=True)
+        lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=60, gamma=0.1)
+        #lr_scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[20, 60, 70, 80], gamma=0.1)
     # SGD_Warmup
     elif optim_type == 'SGD_Warmup':
-        lr_steps = [20, 80, 100]
-        init_lr = 0.00001
+        lr_steps = [80, 100]
+        init_lr = 5e-5
         gamma = 0.1
-        warmup_lr = 0.001
+        warmup_lr = 1e-3
         warmup_steps = 20
         gap = warmup_lr - init_lr
         warmup_mults = [(init_lr + (i+1)*gap/warmup_steps) / (init_lr + i*gap/warmup_steps) for i in range(warmup_steps)]
         warmup_steps = list(range(warmup_steps))
         lr_mults = warmup_mults + [gamma]*len(lr_steps)
         lr_steps = warmup_steps + lr_steps
-        optimizer = optim.SGD(params=model.parameters() ,lr=init_lr , weight_decay=5e-4, momentum=0.9, nesterov=True) 
+        optimizer = optim.SGD(params=model.parameters() ,lr=init_lr , weight_decay=1e-5, momentum=0.9, nesterov=True) 
         lr_scheduler = StepLRScheduler(optimizer, lr_steps, lr_mults, last_iter=-1) 
     # Adam 
     elif optim_type == 'Adam':
-        optimizer = optim.Adam(params=model.parameters(), lr=0.001)
+        optimizer = optim.Adam(params=model.parameters(), lr=0.01)
         lr_scheduler = None
 
     dir_name = os.path.join('./logs', name)

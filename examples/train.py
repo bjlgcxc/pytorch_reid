@@ -31,8 +31,8 @@ parser.add_argument('--color_jitter', action='store_true', help='use color jitte
 parser.add_argument('--batchsize', default=16, type=int, help='batchsize')
 parser.add_argument('--erasing_p', default=0, type=float, help='Random Erasing probability, in [0,1]')
 parser.add_argument('--metric', default=None, type=str, help='metric, in [arcface, cosface, sphereface]')
-parser.add_argument('--margin', default=None, type=float, help='margin')
-parser.add_argument('--scalar', default=None, type=float, help='scalar')
+parser.add_argument('--margin', default=0.0, type=float, help='margin')
+parser.add_argument('--scalar', default=30, type=float, help='scalar')
 parser.add_argument('--optim_type', default='SGD_Step', type=str, help='SGD_Step, SGD_warmup, Adam')
 parser.add_argument('--dropout', default=0.5, type=float, help='dropout rate')
 parser.add_argument('--feat_size', default=1024, type=int, help='feature size')
@@ -163,7 +163,7 @@ def save_network(network, epoch_label):
     save_path = os.path.join('./logs', name, save_filename)
     torch.save(network.cpu().state_dict(), save_path)
     if torch.cuda.is_available:
-        network.cuda(0)
+        network.cuda()
 
 
 if __name__ == '__main__':
@@ -174,15 +174,15 @@ if __name__ == '__main__':
     
 	# SGD_Step
     if optim_type == 'SGD_Step':
-        optimizer = optim.SGD(params=model.parameters(), lr=0.01, weight_decay=1e-4, momentum=0.9, nesterov=True)
+        optimizer = optim.SGD(params=model.parameters(), lr=0.01, weight_decay=5e-4, momentum=0.9, nesterov=True)
         lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.1)
     # SGD_Warmup
     elif optim_type == 'SGD_Warmup':
-        lr_steps = [20, 30, 35, 40, 45, 50]
-        init_lr = 0.00001
+        lr_steps = [60, 80]
+        init_lr = 5e-5
         gamma = 0.1
-        warmup_lr = 0.0001
-        warmup_steps = 10
+        warmup_lr = 1e-3
+        warmup_steps = 20
         gap = warmup_lr - init_lr
         warmup_mults = [(init_lr + (i+1)*gap/warmup_steps) / (init_lr + i*gap/warmup_steps) for i in range(warmup_steps)]
         warmup_steps = list(range(warmup_steps))
@@ -203,4 +203,4 @@ if __name__ == '__main__':
     with open('%s/opts.json' % dir_name, 'w') as fp:
         json.dump(vars(opt), fp, indent=1)
     
-    model = train_model(model, criterion, optimizer, lr_scheduler, num_epochs=50)
+    model = train_model(model, criterion, optimizer, lr_scheduler, num_epochs=80)
