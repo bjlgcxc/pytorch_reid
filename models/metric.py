@@ -73,7 +73,7 @@ class AddMarginProduct(nn.Module):
         super(AddMarginProduct, self).__init__()
         self.in_features = in_features
         self.out_features = out_features
-        self.s = Parameter(torch.FloatTensor([s]))
+        self.s = s
         self.m = m
         self.weight = Parameter(torch.FloatTensor(out_features, in_features))
         init.kaiming_uniform(self.weight)
