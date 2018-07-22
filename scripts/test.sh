@@ -1,14 +1,14 @@
 #!/bin/bash
 
-metric=cosface
-margin=0.35
-scalar=30
+metric=linear
+margin=0.25
+scalar=20
 name=${metric}_m_${margin}_s_${scalar}
 epoch=last
 feat_size=1024
-batchsize=32
+batchsize=64
 
-srun -p VIFrontEnd --gres=gpu:1 \
+#srun -p VIFrontEnd --gres=gpu:1 \
 python examples/test.py \
   --batchsize=${batchsize} \
   --metric=${metric} \

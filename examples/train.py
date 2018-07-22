@@ -91,7 +91,7 @@ image_datasets['val'] = datasets.ImageFolder(os.path.join(data_dir, 'val'),
                                              data_transforms['val'])
 
 dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=opt.batchsize,
-                                              shuffle=True, num_workers=16)
+                                              shuffle=True, num_workers=16, drop_last=True)
                for x in ['train', 'val']}
 dataset_sizes = {x: len(image_datasets[x]) for x in ['train', 'val']}
 class_names = image_datasets['train'].classes
@@ -172,10 +172,10 @@ if __name__ == '__main__':
 
     criterion = nn.CrossEntropyLoss()
     
-	# SGD_Step
+    # SGD_Step
     if optim_type == 'SGD_Step':
         optimizer = optim.SGD(params=model.parameters(), lr=0.01, weight_decay=5e-4, momentum=0.9, nesterov=True)
-        lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.1)
+        lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=40, gamma=0.1)
     # SGD_Warmup
     elif optim_type == 'SGD_Warmup':
         lr_steps = [60, 80]
@@ -203,4 +203,4 @@ if __name__ == '__main__':
     with open('%s/opts.json' % dir_name, 'w') as fp:
         json.dump(vars(opt), fp, indent=1)
     
-    model = train_model(model, criterion, optimizer, lr_scheduler, num_epochs=80)
+    model = train_model(model, criterion, optimizer, lr_scheduler, num_epochs=60)
