@@ -64,7 +64,7 @@ transform_train_list = [
 ]
 
 transform_val_list = [
-    transforms.Resize(size=(256, 128), interpolation=3),  # Image.BICUBIC
+    transforms.Resize(size=(288, 144), interpolation=3),  # Image.BICUBIC
     transforms.ToTensor(),
     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
 ]
@@ -83,6 +83,7 @@ data_transforms = {
 train_all = ''
 if opt.train_all:
     train_all = '_all'
+    print('train all.')
 
 image_datasets = {}
 image_datasets['train'] = datasets.ImageFolder(os.path.join(data_dir, 'train' + train_all),
@@ -179,8 +180,8 @@ if __name__ == '__main__':
     
 	# SGD_Step
     if optim_type == 'SGD_Step':
-        optimizer = optim.SGD(params=model.parameters(), lr=0.01, weight_decay=5e-4, momentum=0.9, nesterov=True)
-        lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=60, gamma=0.1)
+        optimizer = optim.SGD(params=model.parameters(), lr=0.1, weight_decay=5e-4, momentum=0.9, nesterov=True)
+        lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=40, gamma=0.1)
         #lr_scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[20, 60, 70, 80], gamma=0.1)
     # SGD_Warmup
     elif optim_type == 'SGD_Warmup':
@@ -209,4 +210,4 @@ if __name__ == '__main__':
     with open('%s/opts.json' % dir_name, 'w') as fp:
         json.dump(vars(opt), fp, indent=1)
     
-    model = train_model(model, criterion, optimizer, lr_scheduler, num_epochs=200)
+    model = train_model(model, criterion, optimizer, lr_scheduler, num_epochs=120)

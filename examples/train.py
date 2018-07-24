@@ -13,11 +13,13 @@ import time
 import os
 import sys
 import shutil
+import numpy as np
 if not os.getcwd() in sys.path:
      sys.path.append(os.getcwd())
 from models import ResNet50
 from models.utils import StepLRScheduler
 from utils.random_erasing import RandomErasing
+from utils.autoaugment import ImageNetPolicy
 import json
 
 #########################################################################################################
@@ -55,15 +57,14 @@ dropout = opt.dropout
 feat_size = opt.feat_size
 
 transform_train_list = [
-    transforms.Resize((288, 144), interpolation=3),
-    transforms.RandomCrop((256, 128)),
+    transforms.Resize(size=(288, 144), interpolation=3),
     transforms.RandomHorizontalFlip(),
     transforms.ToTensor(),
     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
 ]
 
 transform_val_list = [
-    transforms.Resize(size=(256, 128), interpolation=3),  
+    transforms.Resize(size=(288, 144), interpolation=3),  
     transforms.ToTensor(),
     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
 ]
@@ -91,7 +92,7 @@ image_datasets['val'] = datasets.ImageFolder(os.path.join(data_dir, 'val'),
                                              data_transforms['val'])
 
 dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=opt.batchsize,
-                                              shuffle=True, num_workers=16, drop_last=True)
+                                              shuffle=True, num_workers=16)
                for x in ['train', 'val']}
 dataset_sizes = {x: len(image_datasets[x]) for x in ['train', 'val']}
 class_names = image_datasets['train'].classes
@@ -169,13 +170,13 @@ def save_network(network, epoch_label):
 if __name__ == '__main__':
 
     model = ResNet50(len(class_names), feat_size, metric, margin, scalar, dropout).cuda()
-
+    #print(model)
     criterion = nn.CrossEntropyLoss()
     
     # SGD_Step
     if optim_type == 'SGD_Step':
         optimizer = optim.SGD(params=model.parameters(), lr=0.01, weight_decay=5e-4, momentum=0.9, nesterov=True)
-        lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=40, gamma=0.1)
+        lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.1)
     # SGD_Warmup
     elif optim_type == 'SGD_Warmup':
         lr_steps = [60, 80]

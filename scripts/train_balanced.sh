@@ -7,10 +7,11 @@ name=${metric}_m_${margin}_s_${scalar}_balanced
 optim_type=SGD_Step
 dropout=0
 feat_size=1024
-batchsize=64
+batchsize=32
 
-srun -p VIFrontEnd --gres=gpu:1 \
+srun -p VIBackEnd --gres=gpu:1 \
 python examples/train_balanced.py \
+  --train_all \
   --batchsize=${batchsize} \
   --metric=${metric} \
   --margin=${margin} \

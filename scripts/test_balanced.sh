@@ -8,7 +8,7 @@ epoch=last
 feat_size=1024
 batchsize=32
 
-srun -p VIFrontEnd --gres=gpu:1 \
+srun -p VIBackEnd --gres=gpu:1 \
 python examples/test.py \
   --batchsize=${batchsize} \
   --metric=${metric} \
