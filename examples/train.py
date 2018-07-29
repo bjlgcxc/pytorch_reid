@@ -57,14 +57,14 @@ dropout = opt.dropout
 feat_size = opt.feat_size
 
 transform_train_list = [
-    transforms.Resize(size=(288, 144), interpolation=3),
+    transforms.Resize(size=(256, 128), interpolation=3),
     transforms.RandomHorizontalFlip(),
     transforms.ToTensor(),
     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
 ]
 
 transform_val_list = [
-    transforms.Resize(size=(288, 144), interpolation=3),  
+    transforms.Resize(size=(256, 128), interpolation=3),  
     transforms.ToTensor(),
     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
 ]
@@ -128,7 +128,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=30):
 
                 optimizer.zero_grad()
 
-                outputs = model(inputs, labels)
+                feat, outputs = model(inputs, labels)
                 _, preds = torch.max(outputs.data, 1)
                 loss = criterion(outputs, labels)
 
@@ -141,7 +141,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=30):
                 running_corrects += torch.sum(preds == labels.data)
 
             epoch_loss = running_loss / dataset_sizes[phase]
-            epoch_acc = running_corrects / dataset_sizes[phase]
+            epoch_acc = running_corrects.float() / dataset_sizes[phase]
 
             print('{} Loss: {:.4f} Acc: {:.4f}'.format(
                 phase, epoch_loss, epoch_acc))
@@ -175,7 +175,7 @@ if __name__ == '__main__':
     
     # SGD_Step
     if optim_type == 'SGD_Step':
-        optimizer = optim.SGD(params=model.parameters(), lr=0.01, weight_decay=5e-4, momentum=0.9, nesterov=True)
+        optimizer = optim.SGD(params=model.parameters(), lr=0.01, weight_decay=5e-5, momentum=0.9, nesterov=True)
         lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.1)
     # SGD_Warmup
     elif optim_type == 'SGD_Warmup':
@@ -193,8 +193,22 @@ if __name__ == '__main__':
         lr_scheduler = StepLRScheduler(optimizer, lr_steps, lr_mults, last_iter=-1) 
     # Adam 
     elif optim_type == 'Adam':
-        optimizer = optim.Adam(params=model.parameters(), lr=0.001)
+        optimizer = optim.Adam(params=model.parameters(), lr=0.01)
         lr_scheduler = None
+    elif optim_type == 'Adam_Warmup':
+        lr_steps = [40, 60]
+        init_lr = 1e-4
+        gamma = 0.1
+        warmup_lr = 1e-3
+        warmup_steps = 20
+        gap = warmup_lr - init_lr
+        warmup_mults = [(init_lr + (i+1)*gap/warmup_steps) / (init_lr + i*gap/warmup_steps) for i in range(warmup_steps)]
+        warmup_steps = list(range(warmup_steps))
+        lr_mults = warmup_mults + [gamma]*len(lr_steps) 
+        lr_steps = warmup_steps + lr_steps
+        optimizer = optim.Adam(params=model.parameters(), lr=init_lr)
+        lr_scheduler = StepLRScheduler(optimizer, lr_steps, lr_mults, last_iter=-1)
+
 
     dir_name = os.path.join('./logs', name)
     if os.path.isdir(dir_name):
@@ -204,4 +218,4 @@ if __name__ == '__main__':
     with open('%s/opts.json' % dir_name, 'w') as fp:
         json.dump(vars(opt), fp, indent=1)
     
-    model = train_model(model, criterion, optimizer, lr_scheduler, num_epochs=60)
+    model = train_model(model, criterion, optimizer, lr_scheduler, num_epochs=80)

@@ -1,22 +1,10 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.nn import init
 from torchvision import models
-from .resnet50_ibn_a import resnet50_ibn_a
 from torch.autograd import Variable
 from .metric import *
-
-def weights_init_kaiming(m):
-    classname = m.__class__.__name__
-    if classname.find('Conv') != -1:
-        init.kaiming_normal(m.weight.data, a=0, mode='fan_in')
-    elif classname.find('Linear') != -1:
-        init.kaiming_normal(m.weight.data, a=0, mode='fan_out')
-        init.constant(m.bias.data, 0.0)
-    elif classname.find('BatchNorm1d') != -1:
-        init.kaiming_normal(m.weight.data, 1.0, 0.02)
-        init.constant(m.bias.data, 0.0)
-
 
 class ClassBlock(nn.Module):
     def __init__(self, input_dim, class_num, metric=None, margin=None, scalar=None, droprate=0):
@@ -49,7 +37,6 @@ class ClassBlock(nn.Module):
         x = self.relu(x)
         if self.droprate > 0:
             x = self.dropout(x)
-
         if y is None or self.metric=='linear':
             x = self.classifier(x)
         else:
@@ -58,38 +45,61 @@ class ClassBlock(nn.Module):
 
 
 class Backbone(nn.Module):
-    def __init__(self, feat_size, pretrained=True):
+    def __init__(self, feat_size):
         super(Backbone, self).__init__()
-        #self.model = resnet50_ibn_a(pretrained=pretrained)
-        self.model = model.resnet50(pretrained=pretrained)
-        if not pretrained:
-            weights_init_kaiming(self.model)
-        self.model.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.model.layer4[0].downsample[0].stride = (1,1)
+
+        self.model = models.resnet50(pretrained=True)
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+        self.model.layer4[0].downsample[0].stride = (1,1)      
         self.model.layer4[0].conv2.stride = (1,1)
-        # feature layer
-        self.model.fc = nn.Linear(2048, feat_size)
-        self.model.fc.apply(weights_init_kaiming)
+        
+        self.toplayer = nn.Conv2d(2048, 256, kernel_size=1, stride=1, padding=0)
+
+        # Lateral layers
+        self.latlayer1 = nn.Conv2d(1024, 256, kernel_size=1, stride=1, padding=0)
+        self.latlayer2 = nn.Conv2d(512, 256, kernel_size=1, stride=1, padding=0)
+        self.latlayer3 = nn.Conv2d(256, 256, kernel_size=1, stride=1, padding=0)
+
+        self.fc = nn.Linear(1024, feat_size)
+
+    def _upsample_add(self, x, y):
+        '''Upsample and add two feature maps.'''
+        _, _, H, W = y.size()
+        return F.upsample(x, size=(H, W), mode='bilinear') + y
 
     def forward(self, x):
-        x = self.model.conv1(x)
-        x = self.model.bn1(x)
-        x = self.model.relu(x)
-        x = self.model.maxpool(x)
-        x = self.model.layer1(x)
-        x = self.model.layer2(x)
-        x = self.model.layer3(x)
-        x = self.model.layer4(x)
-        x = self.model.avgpool(x)
+        c1 = self.model.conv1(x)
+        c1 = self.model.bn1(c1)
+        c1 = self.model.relu(c1)
+        c1 = self.model.maxpool(c1)
+
+        c2 = self.model.layer1(c1)
+        c3 = self.model.layer2(c2)
+        c4 = self.model.layer3(c3)
+        c5 = self.model.layer4(c4)
+
+
+        p5 = self.toplayer(c5)
+        p4 = self._upsample_add(p5, self.latlayer1(c4))
+        p3 = self._upsample_add(p4, self.latlayer2(c3))
+        p2 = self._upsample_add(p3, self.latlayer3(c2))
+
+        # Smooth
+        p5 = self.avgpool(p5)
+        p4 = self.avgpool(p4)
+        p3 = self.avgpool(p3)
+        p2 = self.avgpool(p2)
+
+        x = torch.cat([p5, p4, p3, p2], 1)
         x = torch.squeeze(x)
-        x = self.model.fc(x)
+        x = self.fc(x)
 
         return x
 
 
-class ResNet50(nn.Module):
+class FPN50(nn.Module):
     def __init__(self, class_num, feat_size, metric=None, margin=None, scalar=None, droprate=0):
-        super(ResNet50, self).__init__()
+        super(FPN50, self).__init__()
         self.model = Backbone(feat_size)
         self.classifier = ClassBlock(feat_size, class_num, metric, margin, scalar, droprate)
 

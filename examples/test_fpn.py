@@ -5,7 +5,6 @@ from __future__ import print_function, division
 import argparse
 import os
 import sys
-import numpy as np
 if not os.getcwd() in sys.path:
     sys.path.append(os.getcwd())
 import scipy.io
@@ -13,7 +12,7 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 from torchvision import datasets, transforms
-from models import ResNet50 
+from models import FPN50
 
 ######################################################################
 # Options
@@ -48,7 +47,7 @@ feat_size = opt.feat_size
 # data.
 #
 data_transforms = transforms.Compose([
-    transforms.Resize((288, 144), interpolation=3),
+    transforms.Resize((256, 128), interpolation=3),
     transforms.ToTensor(),
     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
 ])
@@ -131,7 +130,7 @@ query_cam,query_label = get_id(query_path)
 ######################################################################
 # Load Collected data Trained model
 print('----------test-----------')
-model_structure = ResNet50(751, feat_size, metric, margin, scalar)
+model_structure = FPN50(751, feat_size, metric, margin, scalar)
 
 model = load_network(model_structure).model
 
@@ -144,9 +143,5 @@ gallery_feature = extract_feature(model, dataloaders['gallery'])
 query_feature = extract_feature(model, dataloaders['query'])
 
 # Save to Matlab for check
-#result = {'gallery_f':gallery_feature.numpy(),'gallery_label':gallery_label,'gallery_cam':gallery_cam,'query_f':query_feature.numpy(),'query_label':query_label,'query_cam':query_cam}
-#scipy.io.savemat(save, result)
-np.save('test_probe_labels.npy', query_label)
-np.save('test_gallery_labels.npy', gallery_label)
-np.save('test_probe_features.npy', query_feature.numpy()) 
-np.save('test_gallery_features.npy',gallery_feature.numpy() )
+result = {'gallery_f':gallery_feature.numpy(),'gallery_label':gallery_label,'gallery_cam':gallery_cam,'query_f':query_feature.numpy(),'query_label':query_label,'query_cam':query_cam}
+scipy.io.savemat(save, result)

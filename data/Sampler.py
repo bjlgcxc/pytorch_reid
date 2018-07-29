@@ -17,12 +17,12 @@ class BalancedSampler(Sampler):
         self.num_samples = len(self.pids)       
 
     def __len__(self):
-	    return len(self.data_source) // (self.num_samples*self.num_instances) * self.num_samples * self.num_instances
+	    return self.num_samples * self.num_instances
 		
     def __iter__(self):
         ret = []
-        for _ in range(len(self.data_source) // (self.num_samples*self.num_instances)):
-            indices = torch.randperm(self.num_samples)
+        indices = torch.randperm(self.num_samples)
+        for _ in range(1):
             for i in indices:
                 pid = self.pids[i]
                 t = self.pid_index[pid]

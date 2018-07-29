@@ -15,11 +15,10 @@ import sys
 import shutil
 if not os.getcwd() in sys.path:
      sys.path.append(os.getcwd())
-from models import ResNet50
+from models import FPN50
 from models.utils import StepLRScheduler
-from utils import RandomErasing
-from utils import ImageNetPolicy
-from utils import Cutout
+from utils.random_erasing import RandomErasing
+from utils.autoaugment import ImageNetPolicy
 import json
 from data import BalancedSampler
 from loss import TripletLoss, FocalLoss
@@ -34,7 +33,6 @@ parser.add_argument('--train_all', action='store_true', help='use all training d
 parser.add_argument('--color_jitter', action='store_true', help='use color jitter in training')
 parser.add_argument('--batchsize', default=16, type=int, help='batchsize')
 parser.add_argument('--erasing_p', default=0, type=float, help='Random Erasing probability, in [0,1]')
-parser.add_argument('--cutout', action='store_true', help='use cutout in training')
 parser.add_argument('--metric', default=None, type=str, help='metric, in [arcface, cosface, sphereface]')
 parser.add_argument('--margin', default=None, type=float, help='margin')
 parser.add_argument('--scalar', default=None, type=float, help='scalar')
@@ -73,17 +71,11 @@ transform_val_list = [
 ]
 
 if opt.erasing_p > 0:
-    print('use random eraseing, p={}'.format(opt.erasing_p))
     transform_train_list = transform_train_list + [RandomErasing(probability=opt.erasing_p, mean=[0.0, 0.0, 0.0])]
 
 if opt.color_jitter:
     transform_train_list = [transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1,
                                                    hue=0)] + transform_train_list
-if opt.cutout:
-    print('use cutout')
-    transform_train_list = transform_train_list + [Cutout(n_holes=1, length=16)]
-
-
 data_transforms = {
     'train': transforms.Compose(transform_train_list),
     'val': transforms.Compose(transform_val_list),
@@ -155,11 +147,11 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=30):
                     optimizer.step()
 
                 # statistics
-                running_loss += loss.data[0]
+                running_loss += loss.data
                 running_corrects += torch.sum(preds == labels.data)
  
             epoch_loss = running_loss / dataset_sizes[phase]
-            epoch_acc = running_corrects / dataset_sizes[phase]
+            epoch_acc = running_corrects.float() / dataset_sizes[phase]
 
             print('{} Loss: {:.4f} Acc: {:.4f}'.format(
                 phase, epoch_loss, epoch_acc))
@@ -187,7 +179,7 @@ def save_network(network, epoch_label):
 
 if __name__ == '__main__':
 
-    model = ResNet50(len(class_names), feat_size, metric, margin, scalar, dropout).cuda()
+    model = FPN50(len(class_names), feat_size, metric, margin, scalar, dropout).cuda()
 
     xent_criterion = nn.CrossEntropyLoss()
     tri_criterion = TripletLoss()

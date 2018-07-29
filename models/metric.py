@@ -76,8 +76,8 @@ class AddMarginProduct(nn.Module):
         self.s = s
         self.m = m
         self.weight = Parameter(torch.FloatTensor(out_features, in_features))
-        init.xavier_uniform(self.weight)
-   
+        init.kaiming_uniform(self.weight)
+
         print('{}, m={}, s={}'.format('cosface', m, s))
 
     def forward(self, input, label):
