@@ -61,7 +61,7 @@ class Backbone(nn.Module):
     def __init__(self, feat_size, pretrained=True):
         super(Backbone, self).__init__()
         #self.model = resnet50_ibn_a(pretrained=pretrained)
-        self.model = model.resnet50(pretrained=pretrained)
+        self.model = models.resnet50(pretrained=pretrained)
         if not pretrained:
             weights_init_kaiming(self.model)
         self.model.avgpool = nn.AdaptiveAvgPool2d((1, 1))

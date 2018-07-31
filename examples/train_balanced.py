@@ -217,7 +217,7 @@ if __name__ == '__main__':
         optimizer = optim.Adam(params=model.parameters(), lr=0.1)
         lr_scheduler = None
     elif optim_type == 'Adam_Warmup':
-        lr_steps = [80, 180]
+        lr_steps = [80, 160]
         init_lr = 1e-4
         gamma = 0.1
         warmup_lr = 1e-3
@@ -239,4 +239,4 @@ if __name__ == '__main__':
     with open('%s/opts.json' % dir_name, 'w') as fp:
         json.dump(vars(opt), fp, indent=1)
     
-    model = train_model(model, criterion, optimizer, lr_scheduler, num_epochs=300)
+    model = train_model(model, criterion, optimizer, lr_scheduler, num_epochs=200)

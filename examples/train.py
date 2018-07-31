@@ -196,7 +196,7 @@ if __name__ == '__main__':
         optimizer = optim.Adam(params=model.parameters(), lr=0.01)
         lr_scheduler = None
     elif optim_type == 'Adam_Warmup':
-        lr_steps = [40, 60]
+        lr_steps = [80, 180]
         init_lr = 1e-4
         gamma = 0.1
         warmup_lr = 1e-3
